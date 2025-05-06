@@ -1,4 +1,4 @@
-module PubSubService
+module github.com/YuarenArt/PubSubService
 
 go 1.24.0
 
