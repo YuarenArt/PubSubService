@@ -1,0 +1,54 @@
+# Бинарные файлы и сборочные артефакты
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Временные файлы сборки Go
+*.o
+*.a
+*.out
+*.test
+*.prof
+
+# Кэш и временные файлы Go
+/go/pkg/
+/go/bin/
+go.sum
+*.mod.bak
+
+
+*.log
+/tmp/
+/logs/
+
+# Конфигурационные файлы и секреты
+config.yaml
+.env
+*.secret
+*.pem
+*.key
+*.cert
+
+# Генерируемые файлы gRPC
+*.pb.go
+*.pb.gw.go
+*_grpc.pb.go
+
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Временные файлы и резервные копии
+*~
+*.bak
+*.tmp
+
+Dockerfile.local
+*.dockerignore
+/.github/workflows/*.local.yml
