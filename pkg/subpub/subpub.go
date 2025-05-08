@@ -3,6 +3,7 @@ package subpub
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -61,13 +62,13 @@ type subscriber struct {
 
 // subscription represents a subscription to a subject.
 type subscription struct {
-	sp      *subPub
+	sp      *SubPubImpl
 	subject string
 	id      uint64
 }
 
-// subPub is the main implementation of the Publisher-Subscriber system.
-type subPub struct {
+// SubPubImpl is the main implementation of the Publisher-Subscriber system.
+type SubPubImpl struct {
 	mu        sync.RWMutex
 	subjects  map[string]map[uint64]*subscriber
 	nextID    uint64
@@ -78,13 +79,13 @@ type subPub struct {
 
 // NewSubPub creates a new SubPub instance.
 func NewSubPub() SubPub {
-	return &subPub{
+	return &SubPubImpl{
 		subjects: make(map[string]map[uint64]*subscriber),
 	}
 }
 
 // Subscribe registers a handler for the specified subject with optional configurations.
-func (sp *subPub) Subscribe(subject string, cb MessageHandler, opts ...SubscribeOption) (Subscription, error) {
+func (sp *SubPubImpl) Subscribe(subject string, cb MessageHandler, opts ...SubscribeOption) (Subscription, error) {
 	if subject == "" {
 		return nil, errors.New("subject cannot be empty")
 	}
@@ -103,7 +104,7 @@ func (sp *subPub) Subscribe(subject string, cb MessageHandler, opts ...Subscribe
 	id := sp.nextID
 	sp.nextID++
 
-	// Default buffer size is 100, can be overridden by options.
+	// The default buffer size is 100, can be overridden by options.
 	sub := &subscriber{
 		id:     id,
 		ch:     make(chan interface{}, 100),
@@ -141,7 +142,7 @@ func (sp *subPub) Subscribe(subject string, cb MessageHandler, opts ...Subscribe
 }
 
 // Publish sends a message to all subscribers of the given subject, respecting timeouts.
-func (sp *subPub) Publish(subject string, msg interface{}) error {
+func (sp *SubPubImpl) Publish(subject string, msg interface{}) error {
 	if subject == "" {
 		return errors.New("subject cannot be empty")
 	}
@@ -162,19 +163,19 @@ func (sp *subPub) Publish(subject string, msg interface{}) error {
 	for id, sub := range subs {
 		timeout := sub.timeout
 		if timeout == 0 {
-			timeout = 50 * time.Millisecond // Default timeout.
+			timeout = 50 * time.Millisecond
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
 
 		select {
 		case sub.ch <- msg:
-			// Message sent successfully.
+
 		case <-ctx.Done():
-			// Timeout or full buffer, message dropped.
-			errs = append(errs, errors.New("dropped message for slow subscriber ID "+string(rune(id))))
+			errs = append(errs, fmt.Errorf("dropped message for slow subscriber ID %d", id))
 		}
+
+		cancel()
 	}
 
 	if len(errs) > 0 {
@@ -184,7 +185,7 @@ func (sp *subPub) Publish(subject string, msg interface{}) error {
 }
 
 // Close shuts down the SubPub system, respecting the provided context.
-func (sp *subPub) Close(ctx context.Context) error {
+func (sp *SubPubImpl) Close(ctx context.Context) error {
 	var err error
 	sp.closeOnce.Do(func() {
 		sp.mu.Lock()
