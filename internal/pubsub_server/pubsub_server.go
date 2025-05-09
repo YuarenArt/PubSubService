@@ -10,15 +10,18 @@ import (
 	"log"
 )
 
+// PubSubServer implements the gRPC PubSub service with a Publisher-Subscriber backend.
 type PubSubServer struct {
 	pb.UnimplementedPubSubServer
 	sp subpub.SubPub
 }
 
+// NewPubSubServer creates a new PubSubServer instance with the given SubPub backend.
 func NewPubSubServer(sp subpub.SubPub) *PubSubServer {
 	return &PubSubServer{sp: sp}
 }
 
+// Subscribe handles subscription requests, streaming events to the client for a given key.
 func (s *PubSubServer) Subscribe(req *pb.SubscribeRequest, stream pb.PubSub_SubscribeServer) error {
 	key := req.GetKey()
 	if key == "" {
@@ -28,7 +31,6 @@ func (s *PubSubServer) Subscribe(req *pb.SubscribeRequest, stream pb.PubSub_Subs
 	ctx, cancel := context.WithCancel(stream.Context())
 	defer cancel()
 
-	// Подписываемся на события через subpub
 	sub, err := s.sp.Subscribe(key, func(msg interface{}) {
 		event, ok := msg.(*pb.Event)
 		if !ok {
@@ -49,6 +51,7 @@ func (s *PubSubServer) Subscribe(req *pb.SubscribeRequest, stream pb.PubSub_Subs
 	return nil
 }
 
+// Publish handles publication requests, sending an event to all subscribers of the given key.
 func (s *PubSubServer) Publish(ctx context.Context, req *pb.PublishRequest) (*emptypb.Empty, error) {
 
 	if err := ctx.Err(); err != nil {
