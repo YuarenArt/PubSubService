@@ -1,0 +1,38 @@
+# Build stage
+FROM golang:1.24 AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy go.mod and go.sum to cache dependencies
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the rest of the source code
+COPY . .
+
+# Install protoc and Go plugins for Protobuf
+RUN apt-get update && apt-get install -y protobuf-compiler
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+RUN go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
+# Generate Protobuf files
+RUN protoc --go_out=. --go-grpc_out=. proto/pubsub.proto
+
+# Build the server binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/pubsub_server/main.go
+
+# Runtime stage
+FROM alpine:latest
+
+# Install ca-certificates for secure gRPC communication
+RUN apk --no-cache add ca-certificates
+
+# Copy the server binary
+COPY --from=builder /app/server /app/server
+
+# Set working directory
+WORKDIR /app
+
+# Command to run the server
+CMD ["/app/server"]

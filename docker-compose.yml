@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  server:
+    image: pubsub-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    command: /app/server
+    ports:
+      - "50051:50051"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - GRPC_ADDRESS=:50051
+      - LOG_FILE=/app/logs/server.log
+      - LOG_TO_FILE=true
+      - LOG_TO_CONSOLE=true
+    networks:
+      - pubsub-network
+
+  client:
+    image: pubsub-client:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    command: /app/client
+    depends_on:
+      - server
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - GRPC_ADDRESS=server:50051
+      - LOG_FILE=/app/logs/client.log
+      - LOG_TO_FILE=true
+      - LOG_TO_CONSOLE=true
+    tty: true
+    stdin_open: true
+
+    networks:
+      - pubsub-network
+
+networks:
+  pubsub-network:
+    driver: bridge
+
+volumes:
+  logs:
