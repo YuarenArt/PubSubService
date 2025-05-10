@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -80,6 +81,10 @@ func (c *PubSubClient) processCommand(ctx context.Context, reader *bufio.Reader,
 	// Read input line
 	line, err := reader.ReadString('\n')
 	if err != nil {
+		if err == io.EOF {
+			c.logger.Info("Received EOF, stopping client")
+			return errExitCommand // Завершаем цикл
+		}
 		return err
 	}
 
